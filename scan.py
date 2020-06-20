@@ -13,8 +13,12 @@ class Application(QtWidgets.QApplication):
 # class Application(QtCore.QCoreApplication):
   def __init__(self, *args, **kwargs):
     super().__init__(*args, **kwargs)
+    # self.le_controller = QLowEnergyController
+    
     self.scan_for_devices()
+    print("before exec")
     self.exec()
+    print("after exec")
 
   def display_status(self):
     print(self.agent.isActive(), self.agent.discoveredDevices())
@@ -23,18 +27,37 @@ class Application(QtWidgets.QApplication):
     if devices is not None:
         for d in devices:
             print(d.name())
+  def c(self, *args, **kwargs):
+      print('c', *args, **kwargs)
+      print('controller connected')
+      self.controller.discoverServices()
+  def service(self, *args, **kwargs):
+      print('service discovered', args, kwargs)
+  def discoveryFinished(self, *args, **kwargs):
+      print('discovery finished', args, kwargs)
+      print('services', self.controller.services())
   def foo(self, *args, **kwargs):
-    print('foo', args, kwargs)
+    # print('foo', args, kwargs)
+    if len(args):
+        if args[0].name().startswith('NIST'):
+            print(args[0].name())
+            self.controller = QtBt.QLowEnergyController(args[0]).createCentral(args[0])
+            self.controller.connected.connect(self.c)
+            self.controller.serviceDiscovered.connect(self.service)
+            self.controller.discoveryFinished.connect(self.discoveryFinished)
+            self.controller.connectToDevice()
+            print(self.controller)
 
   def scan_for_devices(self):
+    print("scan_for_devices")
     self.agent = QtBt.QBluetoothDeviceDiscoveryAgent(self)
     self.agent.deviceDiscovered.connect(self.foo)
     self.agent.finished.connect(self.foo)
     self.agent.error.connect(self.foo)
-    self.agent.setLowEnergyDiscoveryTimeout(1000)
+    self.agent.setLowEnergyDiscoveryTimeout(3000)
 
     timer = QtCore.QTimer(self.agent)
-    timer.start(500)
+    timer.start(5000)
     timer.timeout.connect(self.display_status)
 
     self.agent.start()
